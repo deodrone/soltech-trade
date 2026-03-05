@@ -106,7 +106,7 @@
 <script>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useStore } from 'vuex';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { useDexScreener } from '../composables/useDexScreener';
 import { useJupiter } from '../composables/useJupiter';
 import TradingChart from '../components/charts/TradingChart.vue';
@@ -132,6 +132,7 @@ export default {
   setup() {
     const store = useStore();
     const router = useRouter();
+    const route = useRoute();
     const { getTokenPairs } = useDexScreener();
     const { getTokenList, getLimitOrders, lamportsToUi } = useJupiter();
 
@@ -201,6 +202,10 @@ export default {
     watch(selectedMint, () => { loadPairData(); });
 
     onMounted(async () => {
+      // Load token from URL param (e.g. /trade/MINT_ADDRESS)
+      if (route.params.token && route.params.token !== SOL_MINT) {
+        store.commit('trading/SET_INPUT_MINT', route.params.token);
+      }
       const list = await getTokenList();
       store.commit('tokens/SET_TOKEN_LIST', list);
       await loadPairData();
