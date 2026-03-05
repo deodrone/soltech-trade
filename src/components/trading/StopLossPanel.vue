@@ -86,14 +86,11 @@
 
 <script>
 import { ref, computed, onMounted, watch } from 'vue';
-import axios from 'axios';
+import api from '../../config/api';
 import { useStore } from 'vuex';
 import { useSolanaWallet } from '../../composables/useSolanaWallet';
 import { useDexScreener } from '../../composables/useDexScreener';
 import { useToast } from '../../composables/useToast';
-import { useAuth } from '../../composables/useAuth';
-
-const API = process.env.VUE_APP_API_BASE_URL;
 
 export default {
   name: 'StopLossPanel',
@@ -105,7 +102,6 @@ export default {
     const store = useStore();
     const { connected, publicKey } = useSolanaWallet();
     const { show } = useToast();
-    const { getToken } = useAuth();
 
     const form = ref({
       mint: props.tokenMint,
@@ -141,15 +137,9 @@ export default {
       form.value.takeProfitPrice = +(props.currentPrice * (1 + pct / 100)).toPrecision(6);
     }
 
-    async function authHeaders() {
-      const token = await getToken?.();
-      return token ? { Authorization: `Bearer ${token}` } : {};
-    }
-
     async function loadOrders() {
       try {
-        const headers = await authHeaders();
-        const { data } = await axios.get(`${API}/api/orders?type=sl_tp`, { headers });
+        const { data } = await api.get('/api/orders?type=sl_tp');
         orders.value = (data || []).filter(o => o.type === 'sl_tp');
       } catch { orders.value = []; }
     }
@@ -158,14 +148,13 @@ export default {
       if (!canSubmit.value) return;
       saving.value = true; errorMsg.value = '';
       try {
-        const headers = await authHeaders();
-        await axios.post(`${API}/api/orders`, {
+        await api.post('/api/orders', {
           type: 'sl_tp',
           symbol: form.value.mint,
           amount: form.value.amount,
           stopLossPrice: form.value.useStopLoss ? form.value.stopLossPrice : null,
           takeProfitPrice: form.value.useTakeProfit ? form.value.takeProfitPrice : null,
-        }, { headers });
+        });
         show({ message: 'Order set! Monitoring price...', type: 'success' });
         await loadOrders();
       } catch (e) {
@@ -176,8 +165,7 @@ export default {
 
     async function cancelOrder(id) {
       try {
-        const headers = await authHeaders();
-        await axios.patch(`${API}/api/orders/${id}/cancel`, {}, { headers });
+        await api.patch(`/api/orders/${id}/cancel`, {});
         await loadOrders();
         show({ message: 'Order cancelled', type: 'info' });
       } catch (e) {
