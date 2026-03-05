@@ -57,7 +57,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useStore } from 'vuex';
 import { useDexScreener } from '../composables/useDexScreener';
@@ -95,6 +95,12 @@ export default {
       router.push('/trade');
     }
 
+    watch([tokenData], () => {
+      if (tokenData.value?.name) {
+        document.title = `${tokenData.value.symbol} — Soltech Trade`;
+      }
+    });
+
     onMounted(async () => {
       loading.value = true;
       const [list, pairs] = await Promise.all([
@@ -126,6 +132,12 @@ export default {
 .token-layout { display: grid; grid-template-columns: 1fr 300px; gap: 0; }
 .token-main { border-right: 1px solid #21262d; }
 .token-side { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+@media (max-width: 900px) {
+  .token-layout { grid-template-columns: 1fr; }
+  .token-main { border-right: none; border-bottom: 1px solid #21262d; }
+  .token-header { flex-wrap: wrap; gap: 12px; }
+  .th-right { flex-wrap: wrap; }
+}
 .info-card { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 12px; }
 .info-title { font-size: 0.8rem; font-weight: 600; color: #8b949e; text-transform: uppercase; margin-bottom: 8px; }
 .info-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #21262d; font-size: 0.8rem; }

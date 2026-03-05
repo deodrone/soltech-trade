@@ -33,6 +33,7 @@
 <script>
 import { computed, onMounted, onUnmounted } from 'vue';
 import { useStore } from 'vuex';
+import { auth } from '../config/firebase';
 import { useWebSocket } from '../composables/useWebSocket';
 import { useAlerts } from '../composables/useAlerts';
 import AlertManager from '../components/alerts/AlertManager.vue';
@@ -51,15 +52,17 @@ export default {
 
     onMounted(async () => {
       if (isLoggedIn.value) {
-        const token = await store.getters.currentUser?.getIdToken();
+        const token = await auth.currentUser?.getIdToken();
         connect(token);
         on('alert_triggered', onAlertEvent);
+        on('sl_tp_triggered', onAlertEvent);
         on('whale_trade', onAlertEvent);
       }
     });
 
     onUnmounted(() => {
       off('alert_triggered', onAlertEvent);
+      off('sl_tp_triggered', onAlertEvent);
       off('whale_trade', onAlertEvent);
     });
 

@@ -1,8 +1,6 @@
-import axios from 'axios';
+import api from '../config/api';
 import { ref } from 'vue';
 import { useStore } from 'vuex';
-
-const API = process.env.VUE_APP_API_BASE_URL;
 
 export function useSmartMoney() {
   const store = useStore();
@@ -10,7 +8,7 @@ export function useSmartMoney() {
 
   async function getTopWallets(tokenMint, limit = 20) {
     try {
-      const { data } = await axios.get(`${API}/api/birdeye/token_top_traders`, {
+      const { data } = await api.get('/api/birdeye/token_top_traders', {
         params: { address: tokenMint, time_frame: '24h', sort_type: 'desc', sort_by: 'volume', limit }
       });
       return data.data?.items || [];
@@ -19,7 +17,7 @@ export function useSmartMoney() {
 
   async function getWalletTrades(walletAddress, limit = 50) {
     try {
-      const { data } = await axios.get(`${API}/api/birdeye/wallet_tx_list`, {
+      const { data } = await api.get('/api/birdeye/wallet_tx_list', {
         params: { wallet: walletAddress, limit }
       });
       return data.data?.solana || [];
@@ -28,7 +26,7 @@ export function useSmartMoney() {
 
   async function trackWallet(walletAddress, label = '') {
     try {
-      const { data } = await axios.post(`${API}/api/analytics/watch`, { walletAddress, label });
+      const { data } = await api.post('/api/analytics/watch', { walletAddress, label });
       store.commit('analytics/ADD_WATCHED_WALLET', data);
       return data;
     } catch (e) { throw e; }
@@ -36,14 +34,14 @@ export function useSmartMoney() {
 
   async function untrackWallet(walletAddress) {
     try {
-      await axios.delete(`${API}/api/analytics/watch/${walletAddress}`);
+      await api.delete(`/api/analytics/watch/${walletAddress}`);
       store.commit('analytics/REMOVE_WATCHED_WALLET', walletAddress);
     } catch (e) { throw e; }
   }
 
   async function loadWatchedWallets() {
     try {
-      const { data } = await axios.get(`${API}/api/analytics/watch`);
+      const { data } = await api.get('/api/analytics/watch');
       store.commit('analytics/SET_WATCHED_WALLETS', data);
       return data;
     } catch { return []; }
@@ -52,7 +50,7 @@ export function useSmartMoney() {
   async function getWalletPnL(walletAddress) {
     loading.value = true;
     try {
-      const { data } = await axios.get(`${API}/api/birdeye/wallet_portfolio`, {
+      const { data } = await api.get('/api/birdeye/v1/wallet/token_list', {
         params: { wallet: walletAddress }
       });
       return data.data || null;

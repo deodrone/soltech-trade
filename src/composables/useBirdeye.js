@@ -54,6 +54,13 @@ export function useBirdeye() {
     } catch { return null; }
   }
 
+  async function getTrades(address, limit = 30) {
+    try {
+      const { data } = await axios.get(`${PROXY}/trades`, { params: { address, limit } });
+      return data.data?.items || [];
+    } catch { return []; }
+  }
+
   function ohlcvToChartData(items) {
     return items.map(item => ({
       time: item.unixTime,
@@ -65,5 +72,5 @@ export function useBirdeye() {
     }));
   }
 
-  return { loading, getOHLCV, getTokenOverview, getTopTraders, getTokenList, getTrendingTokens, getWalletPortfolio, ohlcvToChartData };
+  return { loading, getOHLCV, getTokenOverview, getTopTraders, getTokenList, getTrendingTokens, getWalletPortfolio, getTrades, ohlcvToChartData };
 }

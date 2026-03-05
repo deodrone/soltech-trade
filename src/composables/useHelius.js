@@ -33,14 +33,9 @@ export function useHelius() {
 
   async function getTxHistory(walletAddress, limit = 50, before = null) {
     try {
-      const params = { address: walletAddress, limit };
-      if (before) params.before = before;
-      const { data } = await axios.post(PROXY, {
-        jsonrpc: '2.0', id: 1,
-        method: 'getSignaturesForAddress',
-        params: [walletAddress, { limit, before: before || undefined }]
-      });
-      return data.result || [];
+      const url = `${PROXY}/txs/${walletAddress}?limit=${Math.min(limit, 100)}${before ? `&before=${before}` : ''}`;
+      const { data } = await axios.get(url);
+      return data || [];
     } catch { return []; }
   }
 

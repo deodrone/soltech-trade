@@ -1,6 +1,6 @@
 import { ref, onUnmounted } from 'vue';
 
-const WS_URL = process.env.VUE_APP_WS_URL || 'ws://localhost:3000';
+const WS_URL = process.env.VUE_APP_WS_URL || 'ws://localhost:5000';
 
 let sharedWs = null;
 let listeners = {};

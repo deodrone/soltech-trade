@@ -10,7 +10,7 @@ export default {
     SET_WATCHED_WALLETS(state, wallets) { state.watchedWallets = wallets; },
     ADD_WATCHED_WALLET(state, wallet) { state.watchedWallets.push(wallet); },
     REMOVE_WATCHED_WALLET(state, address) {
-      state.watchedWallets = state.watchedWallets.filter(w => w.address !== address);
+      state.watchedWallets = state.watchedWallets.filter(w => w.walletAddress !== address);
     },
     SET_COPY_TRADES(state, trades) { state.copyTrades = trades; },
     SET_SMART_MONEY(state, data) { state.smartMoneyData = data; },

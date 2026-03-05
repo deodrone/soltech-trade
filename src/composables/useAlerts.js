@@ -1,61 +1,81 @@
-import axios from 'axios';
-import { ref, onUnmounted } from 'vue';
+import { ref, computed } from 'vue';
 import { useStore } from 'vuex';
-
-const API = process.env.VUE_APP_API_BASE_URL;
+import { useToast } from './useToast';
+import api from '../config/api';
 
 export function useAlerts() {
   const store = useStore();
-  const ws = ref(null);
+  const { show } = useToast();
+  const loading = ref(false);
 
-  async function loadAlerts() {
+  const alerts = computed(() => store.getters['alerts/activeAlerts']);
+
+  async function fetchAlerts() {
+    loading.value = true;
     try {
-      const { data } = await axios.get(`${API}/api/alerts`);
+      const { data } = await api.get('/api/alerts');
       store.commit('alerts/SET_ALERTS', data);
       return data;
     } catch { return []; }
+    finally { loading.value = false; }
   }
 
-  async function createAlert({ type, mint, symbol, condition, value }) {
-    try {
-      const { data } = await axios.post(`${API}/api/alerts`, { type, mint, symbol, condition, value });
-      store.commit('alerts/ADD_ALERT', data);
-      return data;
-    } catch (e) { throw e; }
+  async function createAlert({ type, mint, condition, value, wallet }) {
+    const { data } = await api.post('/api/alerts', { type, mint, condition, value, wallet });
+    store.commit('alerts/ADD_ALERT', data);
+    return data;
+  }
+
+  async function toggleAlert(id, active) {
+    const { data } = await api.patch(`/api/alerts/${id}`, { active });
+    return data;
   }
 
   async function deleteAlert(id) {
-    try {
-      await axios.delete(`${API}/api/alerts/${id}`);
-      store.commit('alerts/REMOVE_ALERT', id);
-    } catch (e) { throw e; }
+    await api.delete(`/api/alerts/${id}`);
+    store.commit('alerts/REMOVE_ALERT', id);
   }
 
-  function connectWebSocket(token) {
-    const wsUrl = API.replace('http', 'ws') + `/ws?token=${token}`;
-    ws.value = new WebSocket(wsUrl);
+  function handleWsEvent(msg) {
+    if (!msg?.type) return;
 
-    ws.value.onopen = () => store.commit('alerts/SET_WS_CONNECTED', true);
-    ws.value.onclose = () => {
-      store.commit('alerts/SET_WS_CONNECTED', false);
-      setTimeout(() => connectWebSocket(token), 5000); // reconnect
-    };
-    ws.value.onmessage = ({ data }) => {
-      try {
-        const event = JSON.parse(data);
-        if (event.type === 'alert_triggered') {
-          store.commit('alerts/ADD_HISTORY', event.payload);
-        }
-      } catch { /* ignore */ }
-    };
+    if (msg.type === 'alert_triggered') {
+      const { mint, condition, value, currentPrice } = msg.alert || {};
+      store.commit('alerts/ADD_HISTORY', {
+        ...msg,
+        message: `Alert: ${mint?.slice(0, 6)} price ${condition} $${value} (now $${currentPrice?.toFixed(6)})`,
+        receivedAt: Date.now(),
+      });
+      show({
+        message: `Alert triggered: ${mint?.slice(0, 6)} price ${condition} $${value} (now $${currentPrice?.toFixed(6)})`,
+        type: 'warning',
+        duration: 8000,
+      });
+    }
+
+    if (msg.type === 'sl_tp_triggered') {
+      const { triggerType, mint, price, amount } = msg;
+      const label = triggerType === 'stop_loss' ? 'Stop Loss' : 'Take Profit';
+      store.commit('alerts/ADD_HISTORY', {
+        ...msg,
+        message: `${label} triggered for ${mint?.slice(0, 8)}... at $${parseFloat(price).toFixed(6)} — sell ${amount} SOL`,
+        receivedAt: Date.now(),
+      });
+      show({
+        message: `${label} triggered for ${mint?.slice(0, 8)}... at $${parseFloat(price).toFixed(6)} — open Trade to sell ${amount} SOL`,
+        type: triggerType === 'stop_loss' ? 'error' : 'success',
+        duration: 12000,
+      });
+    }
+
+    if (msg.type === 'whale_trade') {
+      store.commit('alerts/ADD_HISTORY', {
+        ...msg,
+        message: `Whale trade: ${msg.wallet?.slice(0, 8)}... bought ${msg.amount} SOL of ${msg.mint?.slice(0, 6)}`,
+        receivedAt: Date.now(),
+      });
+    }
   }
 
-  function disconnectWebSocket() {
-    if (ws.value) { ws.value.onclose = null; ws.value.close(); ws.value = null; }
-    store.commit('alerts/SET_WS_CONNECTED', false);
-  }
-
-  onUnmounted(disconnectWebSocket);
-
-  return { loadAlerts, createAlert, deleteAlert, connectWebSocket, disconnectWebSocket };
+  return { alerts, loading, fetchAlerts, createAlert, toggleAlert, deleteAlert, handleWsEvent };
 }

@@ -19,6 +19,7 @@ export default {
     SET_NEW_LAUNCHES(state, tokens) { state.newLaunches = tokens; },
     SET_SELECTED_TOKEN(state, token) { state.selectedToken = token; },
     SET_SEARCH_RESULTS(state, results) { state.searchResults = results; },
+    CACHE_TOKEN(state, token) { state.tokenMap = { ...state.tokenMap, [token.address]: token }; },
   },
   getters: {
     getByMint: s => mint => s.tokenMap[mint] || null,

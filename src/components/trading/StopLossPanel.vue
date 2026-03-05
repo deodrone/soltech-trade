@@ -149,7 +149,7 @@ export default {
     async function loadOrders() {
       try {
         const headers = await authHeaders();
-        const { data } = await axios.get(`${API}/api/orders?wallet=${publicKey.value}`, { headers });
+        const { data } = await axios.get(`${API}/api/orders?type=sl_tp`, { headers });
         orders.value = (data || []).filter(o => o.type === 'sl_tp');
       } catch { orders.value = []; }
     }
@@ -160,13 +160,11 @@ export default {
       try {
         const headers = await authHeaders();
         await axios.post(`${API}/api/orders`, {
-          userId: publicKey.value,
           type: 'sl_tp',
           symbol: form.value.mint,
           amount: form.value.amount,
           stopLossPrice: form.value.useStopLoss ? form.value.stopLossPrice : null,
           takeProfitPrice: form.value.useTakeProfit ? form.value.takeProfitPrice : null,
-          status: 'open',
         }, { headers });
         show({ message: 'Order set! Monitoring price...', type: 'success' });
         await loadOrders();

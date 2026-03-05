@@ -60,12 +60,11 @@ export default {
         liquidity: 0,
         marketCap: 0,
       }));
-      // Enrich with pair data via DexScreener search
-      // For each token fetch pair
+      // Enrich with pair data — reuse single composable instance
+      const { getTokenPairs: fetchPairs } = useDexScreener();
       await Promise.allSettled(tokens.value.slice(0, 20).map(async (t, i) => {
         try {
-          const { getTokenPairs } = useDexScreener();
-          const pairs = await getTokenPairs(t.address);
+          const pairs = await fetchPairs(t.address);
           if (pairs.length) {
             const p = pairs[0];
             tokens.value[i] = { ...tokens.value[i], ...formatPair(p), symbol: p.baseToken.symbol, name: p.baseToken.name, logo: p.info?.imageUrl || t.logo };

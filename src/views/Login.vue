@@ -53,7 +53,7 @@ export default {
     const loading = ref(false);
     const error = ref('');
 
-    const redirect = () => router.push(route.query.redirect || '/dashboard');
+    const redirect = () => router.push(route.query.redirect || '/trade');
 
     const handleSubmit = async () => {
       error.value = '';

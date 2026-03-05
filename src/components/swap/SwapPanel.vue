@@ -178,9 +178,7 @@ export default {
     function onTokenSelect(token) {
       if (selectorTarget.value === 'input') store.commit('trading/SET_INPUT_MINT', token.address);
       else store.commit('trading/SET_OUTPUT_MINT', token.address);
-      // Also cache token in store
-      const map = { ...store.state.tokens.tokenMap, [token.address]: token };
-      store.state.tokens.tokenMap = map;
+      store.commit('tokens/CACHE_TOKEN', token);
       quoteResult.value = null;
       if (inputAmountLocal.value) onAmountChange();
     }

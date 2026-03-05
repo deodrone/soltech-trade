@@ -135,6 +135,13 @@ export default {
 .ht-header { display: grid; grid-template-columns: 180px 100px 100px 100px 70px 70px; gap: 8px; padding: 8px 16px; font-size: 0.65rem; color: #8b949e; text-transform: uppercase; border-bottom: 1px solid #21262d; }
 .ht-row { display: grid; grid-template-columns: 180px 100px 100px 100px 70px 70px; gap: 8px; padding: 9px 16px; border-bottom: 1px solid #21262d; align-items: center; }
 .ht-row:hover { background: #21262d; }
+@media (max-width: 700px) {
+  .ht-header { grid-template-columns: 1fr 80px 70px 60px; }
+  .ht-header span:nth-child(3), .ht-header span:nth-child(6) { display: none; }
+  .ht-row { grid-template-columns: 1fr 80px 70px 60px; }
+  .ht-row > span:nth-child(3), .ht-row > .trade-btn:nth-child(5) { display: none; }
+  .ht-row > span:nth-child(5) { display: none; }
+}
 .token-cell { display: flex; align-items: center; gap: 8px; }
 .sym { font-weight: 600; font-size: 0.85rem; color: #e6edf3; display: block; }
 .nm { font-size: 0.7rem; color: #8b949e; }

@@ -2,6 +2,7 @@ import { ref, computed } from 'vue';
 import axios from 'axios';
 import { Connection, PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { getSolanaConnection } from './useSolanaWallet';
+import { auth } from '../config/firebase';
 
 // ── Config ───────────────────────────────────────────────────────────────────
 // Set these in .env / AWS EB environment variables
@@ -83,7 +84,9 @@ export function usePremium() {
 
   // ── Register subscription with backend (after paying) ────────────────────
   async function registerSubscription(walletAddress, txid) {
-    const { data } = await axios.post(`${API}/api/premium/subscribe`, { wallet: walletAddress, txid });
+    const token = await auth.currentUser?.getIdToken();
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const { data } = await axios.post(`${API}/api/premium/subscribe`, { wallet: walletAddress, txid }, { headers });
     return data;
   }
 

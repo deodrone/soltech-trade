@@ -34,7 +34,9 @@ jobs:
           VUE_APP_REFERRAL_ACCOUNT: ${{ secrets.VUE_APP_REFERRAL_ACCOUNT }}
           VUE_APP_PLATFORM_FEE_BPS: ${{ secrets.VUE_APP_PLATFORM_FEE_BPS }}
           VUE_APP_SOLTECH_TOKEN_MINT: ${{ secrets.VUE_APP_SOLTECH_TOKEN_MINT }}
-          VUE_APP_LAUNCH_FEE_SOL: ${{ secrets.VUE_APP_LAUNCH_FEE_SOL }}
+          VUE_APP_LAUNCH_FEE_SOL:        ${{ secrets.VUE_APP_LAUNCH_FEE_SOL }}
+          VUE_APP_WS_URL:                ${{ secrets.VUE_APP_WS_URL }}
+          VUE_APP_JUPITER_API_KEY:       ${{ secrets.VUE_APP_JUPITER_API_KEY }}
         run: npm run build
 
       - name: Deploy to Netlify
