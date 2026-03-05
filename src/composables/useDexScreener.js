@@ -43,6 +43,16 @@ export function useDexScreener() {
     } catch { return []; }
   }
 
+  // Batch fetch multiple tokens in one call (up to 30 addresses)
+  async function getTokensBatch(addresses) {
+    if (!addresses?.length) return [];
+    const chunk = addresses.slice(0, 30).join(',');
+    try {
+      const { data } = await axios.get(`${BASE}/tokens/solana/${chunk}`);
+      return data.pairs || [];
+    } catch { return []; }
+  }
+
   async function getNewPairs() {
     // Use search for new Solana pairs sorted by age
     try {
@@ -78,5 +88,5 @@ export function useDexScreener() {
     };
   }
 
-  return { loading, getTrending, getLatestBoosted, getPairData, searchTokens, getTokenPairs, getNewPairs, formatPair };
+  return { loading, getTrending, getLatestBoosted, getPairData, searchTokens, getTokenPairs, getTokensBatch, getNewPairs, formatPair };
 }

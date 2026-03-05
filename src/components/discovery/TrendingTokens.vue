@@ -33,7 +33,7 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useDexScreener } from '../../composables/useDexScreener';
 import TokenLogo from '../common/TokenLogo.vue';
 import PriceChange from '../common/PriceChange.vue';
@@ -42,38 +42,59 @@ export default {
   components: { TokenLogo, PriceChange },
   emits: ['select', 'trade'],
   setup() {
-    const { getTrending, formatPair, loading } = useDexScreener();
+    const { getTrending, getTokensBatch, formatPair, loading } = useDexScreener();
     const tokens = ref([]);
+    let refreshTimer = null;
 
     async function load() {
+      // Step 1: get trending token addresses (1 request)
       const raw = await getTrending();
-      tokens.value = raw.slice(0, 30).map(t => ({
-        symbol: t.tokenAddress?.slice(0, 6) || '?',
-        name: t.description || t.tokenAddress,
-        logo: t.icon,
-        address: t.tokenAddress,
-        price: 0,
-        change24h: 0,
-        change1h: 0,
-        change5m: 0,
-        volume24h: 0,
-        liquidity: 0,
-        marketCap: 0,
-      }));
-      // Enrich with pair data — reuse single composable instance
-      const { getTokenPairs: fetchPairs } = useDexScreener();
-      await Promise.allSettled(tokens.value.slice(0, 20).map(async (t, i) => {
-        try {
-          const pairs = await fetchPairs(t.address);
-          if (pairs.length) {
-            const p = pairs[0];
-            tokens.value[i] = { ...tokens.value[i], ...formatPair(p), symbol: p.baseToken.symbol, name: p.baseToken.name, logo: p.info?.imageUrl || t.logo };
-          }
-        } catch { /* skip */ }
-      }));
+      const boosted = raw.slice(0, 30);
+      const addresses = boosted.map(t => t.tokenAddress).filter(Boolean);
+
+      if (!addresses.length) return;
+
+      // Step 2: batch fetch all pair data in ONE request (vs 20 individual calls)
+      const pairs = await getTokensBatch(addresses);
+
+      // Build a map: mint → best pair (most liquidity)
+      const pairMap = {};
+      for (const p of pairs) {
+        const addr = p.baseToken?.address;
+        if (!addr) continue;
+        if (!pairMap[addr] || (p.liquidity?.usd || 0) > (pairMap[addr].liquidity?.usd || 0)) {
+          pairMap[addr] = p;
+        }
+      }
+
+      tokens.value = boosted.map(t => {
+        const p = pairMap[t.tokenAddress];
+        if (p) {
+          return {
+            ...formatPair(p),
+            address: t.tokenAddress,
+            symbol: p.baseToken.symbol,
+            name: p.baseToken.name,
+            logo: p.info?.imageUrl || t.icon,
+          };
+        }
+        return {
+          address: t.tokenAddress,
+          symbol: t.tokenAddress?.slice(0, 6) || '?',
+          name: t.description || '',
+          logo: t.icon,
+          price: 0, change5m: 0, change1h: 0, change24h: 0,
+          volume24h: 0, liquidity: 0, marketCap: 0,
+        };
+      });
     }
 
-    onMounted(load);
+    onMounted(() => {
+      load();
+      refreshTimer = setInterval(load, 30000); // refresh every 30s
+    });
+    onBeforeUnmount(() => clearInterval(refreshTimer));
+
     const fmt = p => { if (!p) return '—'; if (p < 0.000001) return p.toExponential(2); if (p < 0.01) return p.toFixed(8); return p.toFixed(4); };
     const fmtLg = v => { if (!v) return '—'; if (v >= 1e9) return `$${(v/1e9).toFixed(1)}B`; if (v >= 1e6) return `$${(v/1e6).toFixed(1)}M`; if (v >= 1e3) return `$${(v/1e3).toFixed(0)}K`; return `$${v.toFixed(0)}`; };
     const truncate = (s, n) => s?.length > n ? s.slice(0, n) + '…' : s;
