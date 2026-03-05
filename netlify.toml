@@ -4,6 +4,10 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  VUE_APP_PLATFORM_WALLET = "4AjejjzKDEbEtCnkdNJid7q5n6AYK9ZzHowLb1c9xmWA"
+  VUE_APP_SOLTECH_TOKEN_MINT = "ZsVAw9KE4mJCNJhKPBKChqCPRHxF8F89kwxZ6zqpump"
+  VUE_APP_REFERRAL_ACCOUNT = "52YhxZo12PJbCyvVLsmpUdtvzToin27toxyaP91uzYey"
+  VUE_APP_PLATFORM_FEE_BPS = "50"
 
 # ── SPA routing ───────────────────────────────────────────────────────────────
 [[redirects]]
