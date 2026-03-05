@@ -2,14 +2,20 @@
   <div id="app">
     <div v-if="tokenRefreshing" class="refresh-bar" />
     <nav class="navbar">
-      <div class="brand">Soltech-Trade</div>
-      <router-link to="/">Home</router-link>
-      <router-link to="/trading">Trading</router-link>
-      <router-link to="/dashboard">Dashboard</router-link>
-      <div class="nav-auth">
+      <router-link to="/" class="brand">Soltech Trade</router-link>
+      <div class="nav-links">
+        <router-link to="/trade">Swap</router-link>
+        <router-link to="/discover">Discover</router-link>
+        <router-link to="/portfolio">Portfolio</router-link>
+        <router-link to="/analytics">Analytics</router-link>
+        <router-link to="/launchpad">Launchpad</router-link>
+        <router-link to="/alerts">Alerts</router-link>
+      </div>
+      <div class="nav-right">
+        <premium-badge />
+        <wallet-connect />
         <template v-if="isLoggedIn">
-          <span class="user-email">{{ currentUser.email }}</span>
-          <button class="logout-btn" @click="handleLogout">Logout</button>
+          <button class="logout-btn" @click="handleLogout" title="Sign out">↩</button>
         </template>
         <router-link v-else to="/login" class="login-link">Sign In</router-link>
       </div>
@@ -26,10 +32,12 @@ import { useAuth } from './composables/useAuth';
 import { useToast } from './composables/useToast';
 import { useRouter } from 'vue-router';
 import ToastNotification from './components/ToastNotification.vue';
+import WalletConnect from './components/wallet/WalletConnect.vue';
+import PremiumBadge from './components/monetization/PremiumBadge.vue';
 
 export default {
   name: 'App',
-  components: { ToastNotification },
+  components: { ToastNotification, WalletConnect, PremiumBadge },
   setup() {
     const store = useStore();
     const router = useRouter();
@@ -37,54 +45,93 @@ export default {
     const { show } = useToast();
 
     const isLoggedIn = computed(() => store.getters.isLoggedIn);
-    const currentUser = computed(() => store.getters.currentUser);
     const tokenRefreshing = computed(() => store.getters.tokenRefreshing);
 
     const handleLogout = async () => {
       await logout();
       show({ message: 'You have been signed out.', type: 'info' });
-      router.push('/login');
+      router.push('/');
     };
 
-    return { isLoggedIn, currentUser, tokenRefreshing, handleLogout };
+    return { isLoggedIn, tokenRefreshing, handleLogout };
   }
 };
 </script>
 
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: Arial, sans-serif; background: #0d1117; color: #e6edf3; }
+body { font-family: 'Inter', 'Segoe UI', Arial, sans-serif; background: #0d1117; color: #e6edf3; }
+
 .navbar {
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 16px 24px;
+  gap: 0;
+  padding: 0 20px;
+  height: 48px;
   background: #161b22;
-  border-bottom: 1px solid #30363d;
+  border-bottom: 1px solid #21262d;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
-.navbar .brand { font-weight: bold; font-size: 1.2rem; color: #58a6ff; margin-right: auto; }
-.navbar a { color: #e6edf3; text-decoration: none; }
-.navbar a:hover, .navbar a.router-link-active { color: #58a6ff; }
-.nav-auth { display: flex; align-items: center; gap: 12px; margin-left: auto; }
-.user-email { color: #8b949e; font-size: 0.85rem; }
+
+.brand {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #58a6ff !important;
+  text-decoration: none;
+  margin-right: 24px;
+  white-space: nowrap;
+  letter-spacing: -0.3px;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+.nav-links a {
+  color: #8b949e;
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  transition: color 0.15s, background 0.15s;
+}
+
+.nav-links a:hover { color: #e6edf3; background: #21262d; }
+.nav-links a.router-link-active { color: #58a6ff; }
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
 .logout-btn {
-  padding: 6px 14px;
+  padding: 5px 10px;
   background: transparent;
   border: 1px solid #30363d;
-  color: #e6edf3;
+  color: #8b949e;
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.85rem;
 }
 .logout-btn:hover { border-color: #f85149; color: #f85149; }
+
 .login-link {
-  padding: 6px 14px;
+  padding: 5px 14px;
   background: #238636;
   color: #fff !important;
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
+  text-decoration: none;
 }
 .login-link:hover { background: #2ea043; }
+
 .refresh-bar {
   position: fixed;
   top: 0;
