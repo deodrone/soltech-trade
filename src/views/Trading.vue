@@ -104,7 +104,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
 import { useDexScreener } from '../composables/useDexScreener';
@@ -194,14 +194,20 @@ export default {
       router.push(`/token/${token.mint || token.address}`);
     }
 
+    let priceTimer = null;
+
     watch(orderTab, (val) => { if (val === 'limit') loadLimitOrders(); });
     watch(walletPk, (pk) => { if (pk && orderTab.value === 'limit') loadLimitOrders(); });
+    watch(selectedMint, () => { loadPairData(); });
 
     onMounted(async () => {
       const list = await getTokenList();
       store.commit('tokens/SET_TOKEN_LIST', list);
       await loadPairData();
+      priceTimer = setInterval(loadPairData, 30000);
     });
+
+    onUnmounted(() => { if (priceTimer) clearInterval(priceTimer); });
 
     return {
       searchQuery, swapTab, orderTab, bottomTab, selectedMint, selectedTokenInfo,

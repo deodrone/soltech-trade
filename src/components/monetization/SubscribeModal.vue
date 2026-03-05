@@ -24,13 +24,16 @@
         <!-- Two paths -->
         <div class="paths">
           <!-- Token path -->
-          <div class="path-card token-path" :class="{ available: !soltechMint }">
+          <div class="path-card token-path">
             <div class="path-icon">🪙</div>
             <div class="path-title">Hold $SOLTECH</div>
             <div class="path-detail">{{ fmtNum(tokenThreshold) }}+ tokens = lifetime premium</div>
-            <div v-if="tokenBalance > 0" class="token-bal">You have: {{ fmtNum(tokenBalance) }} $SOLTECH</div>
-            <div v-if="!soltechMint" class="path-note">$SOLTECH launching soon</div>
-            <a v-else :href="`https://solscan.io/token/${soltechMint}`" target="_blank" class="path-link">Buy $SOLTECH ↗</a>
+            <div v-if="tokenBalance > 0" class="token-bal">You have: {{ fmtNum(Math.floor(tokenBalance)) }} $SOLTECH</div>
+            <div v-else class="token-bal" style="color:#8b949e">You have: 0 $SOLTECH</div>
+            <div class="token-path-btns">
+              <a :href="`https://pump.fun/coin/${soltechMint}`" target="_blank" class="path-link-btn pump">Buy on Pump.fun ↗</a>
+              <button class="path-link-btn trade" @click="$emit('close'); $router.push(`/trade/${soltechMint}`)">Trade In-App ↗</button>
+            </div>
           </div>
 
           <!-- Subscription path -->
@@ -64,6 +67,7 @@
 
 <script>
 import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { usePremium } from '../../composables/usePremium';
 import { useSolanaWallet } from '../../composables/useSolanaWallet';
 import { useToast } from '../../composables/useToast';
@@ -77,6 +81,7 @@ export default {
     const { connected, publicKey } = useSolanaWallet();
     const { show } = useToast();
 
+    const router = useRouter();
     const paying = ref(false);
     const errorMsg = ref('');
     const successMsg = ref('');
@@ -117,7 +122,7 @@ export default {
 
     const fmtNum = n => n >= 1e6 ? `${(n/1e6).toFixed(1)}M` : n >= 1e3 ? `${(n/1e3).toFixed(0)}K` : n;
 
-    return { connected, paying, errorMsg, successMsg, tokenBalance, subscriptionPrice, tokenThreshold, soltechMint, handlePay, fmtNum };
+    return { connected, paying, errorMsg, successMsg, tokenBalance, subscriptionPrice, tokenThreshold, soltechMint, handlePay, fmtNum, router };
   },
 };
 </script>
@@ -143,8 +148,12 @@ export default {
 .path-detail { font-size: 0.78rem; color: #8b949e; }
 .path-note { font-size: 0.7rem; color: #8b949e; font-style: italic; }
 .token-bal { font-size: 0.75rem; color: #3fb950; font-weight: 600; }
-.path-link { font-size: 0.78rem; color: #58a6ff; text-decoration: none; }
-.path-link:hover { text-decoration: underline; }
+.token-path-btns { display: flex; flex-direction: column; gap: 6px; width: 100%; margin-top: 4px; }
+.path-link-btn { display: block; padding: 7px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; text-align: center; text-decoration: none; border: none; }
+.path-link-btn.pump { background: rgba(255,165,0,0.15); border: 1px solid rgba(255,165,0,0.4); color: #f0a500; }
+.path-link-btn.pump:hover { background: rgba(255,165,0,0.25); }
+.path-link-btn.trade { background: rgba(88,166,255,0.15); border: 1px solid #58a6ff; color: #58a6ff; }
+.path-link-btn.trade:hover { background: rgba(88,166,255,0.25); }
 .pay-btn { margin-top: 6px; padding: 9px 20px; background: #1f6feb; border: none; border-radius: 8px; color: #fff; font-size: 0.85rem; font-weight: 700; cursor: pointer; width: 100%; }
 .pay-btn:hover:not(:disabled) { background: #388bfd; }
 .pay-btn:disabled { background: #21262d; color: #8b949e; cursor: not-allowed; }

@@ -14,6 +14,11 @@
         <button :class="['tf-btn', { active: showEma9 }]" @click="showEma9 = !showEma9" title="EMA 9">EMA9</button>
         <button :class="['tf-btn', { active: showEma21 }]" @click="showEma21 = !showEma21" title="EMA 21">EMA21</button>
         <button :class="['tf-btn', { active: showEma50 }]" @click="showEma50 = !showEma50" title="EMA 50">EMA50</button>
+        <button :class="['tf-btn', { active: showVwap }]" @click="showVwap = !showVwap" title="VWAP">VWAP</button>
+        <button :class="['tf-btn', { active: showBB }]" @click="showBB = !showBB" title="Bollinger Bands (20,2)">BB</button>
+      </div>
+      <div class="chart-right-controls">
+        <span class="last-update" v-if="lastRefresh">↻ {{ lastRefresh }}</span>
       </div>
     </div>
     <div ref="chartContainer" class="chart-container" />
@@ -23,7 +28,7 @@
 </template>
 
 <script>
-import { ref, watch, onMounted, onUnmounted, computed } from 'vue';
+import { ref, watch, onMounted, onUnmounted, computed, watchEffect } from 'vue';
 import { createChart, CrosshairMode } from 'lightweight-charts';
 import { useStore } from 'vuex';
 import { useBirdeye } from '../../composables/useBirdeye';
@@ -35,14 +40,42 @@ function calcEMA(data, period) {
   const result = [];
   let ema = null;
   for (const d of data) {
-    if (ema === null) {
-      ema = d.close;
-    } else {
-      ema = d.close * k + ema * (1 - k);
-    }
+    ema = ema === null ? d.close : d.close * k + ema * (1 - k);
     result.push({ time: d.time, value: +ema.toFixed(10) });
   }
   return result;
+}
+
+function calcVWAP(data) {
+  // Daily VWAP — resets when date changes
+  const result = [];
+  let cumPV = 0, cumVol = 0;
+  let lastDay = null;
+  for (const d of data) {
+    const day = Math.floor(d.time / 86400);
+    if (day !== lastDay) { cumPV = 0; cumVol = 0; lastDay = day; }
+    const typical = (d.high + d.low + d.close) / 3;
+    cumPV += typical * (d.value || 0);
+    cumVol += d.value || 0;
+    if (cumVol > 0) result.push({ time: d.time, value: +(cumPV / cumVol).toFixed(10) });
+  }
+  return result;
+}
+
+function calcBB(data, period = 20, mult = 2) {
+  const upper = [], lower = [], mid = [];
+  for (let i = 0; i < data.length; i++) {
+    if (i < period - 1) continue;
+    const slice = data.slice(i - period + 1, i + 1).map(d => d.close);
+    const mean = slice.reduce((a, b) => a + b, 0) / period;
+    const variance = slice.reduce((s, v) => s + (v - mean) ** 2, 0) / period;
+    const sd = Math.sqrt(variance);
+    const t = data[i].time;
+    mid.push({ time: t, value: +mean.toFixed(10) });
+    upper.push({ time: t, value: +(mean + mult * sd).toFixed(10) });
+    lower.push({ time: t, value: +(mean - mult * sd).toFixed(10) });
+  }
+  return { upper, lower, mid };
 }
 
 export default {
@@ -57,6 +90,9 @@ export default {
     const showEma9 = ref(true);
     const showEma21 = ref(true);
     const showEma50 = ref(false);
+    const showVwap = ref(false);
+    const showBB = ref(false);
+    const lastRefresh = ref('');
     const timeframes = ['1m', '5m', '15m', '1H', '4H', '1D'];
     const currentTf = computed(() => store.getters['trading/timeframe']);
 
@@ -66,7 +102,12 @@ export default {
     let ema9Series = null;
     let ema21Series = null;
     let ema50Series = null;
+    let vwapSeries = null;
+    let bbUpperSeries = null;
+    let bbLowerSeries = null;
+    let bbMidSeries = null;
     let resizeObserver = null;
+    let refreshTimer = null;
     let lastData = [];
 
     function initChart() {
@@ -89,12 +130,15 @@ export default {
       resizeObserver.observe(chartContainer.value);
     }
 
+    function clearOverlaySeries() {
+      [ema9Series, ema21Series, ema50Series, vwapSeries, bbUpperSeries, bbLowerSeries, bbMidSeries].forEach(s => { if (s) { try { chart.removeSeries(s); } catch {} } });
+      ema9Series = ema21Series = ema50Series = vwapSeries = bbUpperSeries = bbLowerSeries = bbMidSeries = null;
+    }
+
     function addSeries() {
-      if (series) { chart.removeSeries(series); series = null; }
-      if (volumeSeries) { chart.removeSeries(volumeSeries); volumeSeries = null; }
-      if (ema9Series) { chart.removeSeries(ema9Series); ema9Series = null; }
-      if (ema21Series) { chart.removeSeries(ema21Series); ema21Series = null; }
-      if (ema50Series) { chart.removeSeries(ema50Series); ema50Series = null; }
+      if (series) { try { chart.removeSeries(series); } catch {} series = null; }
+      if (volumeSeries) { try { chart.removeSeries(volumeSeries); } catch {} volumeSeries = null; }
+      clearOverlaySeries();
 
       if (chartType.value === 'candlestick') {
         series = chart.addCandlestickSeries({
@@ -127,6 +171,15 @@ export default {
       if (showEma50.value) {
         ema50Series = chart.addLineSeries({ color: '#d2a8ff', lineWidth: 1, priceScaleId: 'right', lastValueVisible: false, priceLineVisible: false });
       }
+      if (showVwap.value) {
+        vwapSeries = chart.addLineSeries({ color: '#ff7b00', lineWidth: 1, lineStyle: 1, priceScaleId: 'right', lastValueVisible: true, priceLineVisible: false });
+      }
+      if (showBB.value) {
+        const bbOpts = { lineWidth: 1, priceScaleId: 'right', lastValueVisible: false, priceLineVisible: false };
+        bbUpperSeries = chart.addLineSeries({ ...bbOpts, color: 'rgba(88,166,255,0.5)' });
+        bbLowerSeries = chart.addLineSeries({ ...bbOpts, color: 'rgba(88,166,255,0.5)' });
+        bbMidSeries   = chart.addLineSeries({ ...bbOpts, color: 'rgba(88,166,255,0.3)', lineStyle: 2 });
+      }
 
       if (lastData.length) applyData(lastData);
     }
@@ -147,12 +200,19 @@ export default {
       if (ema9Series && showEma9.value) ema9Series.setData(calcEMA(data, 9));
       if (ema21Series && showEma21.value) ema21Series.setData(calcEMA(data, 21));
       if (ema50Series && showEma50.value) ema50Series.setData(calcEMA(data, 50));
+      if (vwapSeries && showVwap.value) vwapSeries.setData(calcVWAP(data));
+      if (showBB.value && bbUpperSeries) {
+        const { upper, lower, mid } = calcBB(data);
+        bbUpperSeries.setData(upper);
+        bbLowerSeries.setData(lower);
+        bbMidSeries.setData(mid);
+      }
       chart.timeScale().fitContent();
     }
 
-    async function loadData() {
+    async function loadData(silent = false) {
       if (!props.tokenMint) return;
-      loading.value = true; error.value = '';
+      if (!silent) { loading.value = true; error.value = ''; }
       try {
         const now = Math.floor(Date.now() / 1000);
         const from = now - (300 * 60 * 60);
@@ -161,30 +221,42 @@ export default {
         if (data.length) {
           lastData = data;
           applyData(data);
-        } else {
+          const t = new Date(); lastRefresh.value = `${t.getHours()}:${String(t.getMinutes()).padStart(2,'0')}`;
+        } else if (!silent) {
           error.value = 'No chart data available';
         }
       } catch {
-        error.value = 'Failed to load chart data';
+        if (!silent) error.value = 'Failed to load chart data';
       } finally {
-        loading.value = false;
+        if (!silent) loading.value = false;
       }
     }
 
-    function setTimeframe(tf) { store.commit('trading/SET_TIMEFRAME', tf); }
+    function startAutoRefresh() {
+      if (refreshTimer) clearInterval(refreshTimer);
+      // Refresh interval based on timeframe (1m→15s, 5m→30s, else→60s)
+      const interval = currentTf.value === '1m' ? 15000 : currentTf.value === '5m' ? 30000 : 60000;
+      refreshTimer = setInterval(() => loadData(true), interval);
+    }
+
+    function setTimeframe(tf) {
+      store.commit('trading/SET_TIMEFRAME', tf);
+      startAutoRefresh();
+    }
     function setChartType(type) { chartType.value = type; if (chart) { addSeries(); } }
 
-    onMounted(() => { initChart(); loadData(); });
+    onMounted(() => { initChart(); loadData(); startAutoRefresh(); });
     onUnmounted(() => {
       if (resizeObserver) resizeObserver.disconnect();
+      if (refreshTimer) clearInterval(refreshTimer);
       if (chart) chart.remove();
     });
 
-    watch(() => currentTf.value, () => loadData());
-    watch(() => props.tokenMint, () => loadData());
-    watch([showEma9, showEma21, showEma50], () => { if (chart) addSeries(); });
+    watch(() => currentTf.value, () => { loadData(); startAutoRefresh(); });
+    watch(() => props.tokenMint, () => { loadData(); startAutoRefresh(); });
+    watch([showEma9, showEma21, showEma50, showVwap, showBB], () => { if (chart) addSeries(); });
 
-    return { chartContainer, loading, error, timeframes, currentTf, chartType, showEma9, showEma21, showEma50, setTimeframe, setChartType };
+    return { chartContainer, loading, error, timeframes, currentTf, chartType, showEma9, showEma21, showEma50, showVwap, showBB, lastRefresh, setTimeframe, setChartType };
   },
 };
 </script>
@@ -197,6 +269,8 @@ export default {
 .tf-btn { padding: 3px 8px; background: transparent; border: 1px solid transparent; border-radius: 4px; color: #8b949e; font-size: 0.72rem; cursor: pointer; transition: all 0.12s; }
 .tf-btn:hover { color: #e6edf3; border-color: #30363d; }
 .tf-btn.active { color: #58a6ff; border-color: #58a6ff; background: rgba(88,166,255,0.1); }
+.chart-right-controls { margin-left: auto; display: flex; align-items: center; }
+.last-update { font-size: 0.65rem; color: #484f58; }
 .chart-container { flex: 1; min-height: 320px; }
 .chart-loading, .chart-error { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #8b949e; font-size: 0.85rem; pointer-events: none; }
 .chart-error { color: #f85149; }

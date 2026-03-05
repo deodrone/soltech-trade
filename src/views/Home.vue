@@ -90,6 +90,39 @@
       </div>
     </section>
 
+    <!-- $SOLTECH Token Section -->
+    <section class="soltech-section">
+      <div class="soltech-inner">
+        <div class="soltech-left">
+          <div class="soltech-badge">🪙 Official Platform Token</div>
+          <h2 class="soltech-title">$SOLTECH — Hold to Unlock Premium</h2>
+          <p class="soltech-desc">
+            Hold <strong>100,000 $SOLTECH</strong> tokens in your wallet and unlock all premium features forever —
+            Sniper auto-buy, DCA orders, Stop Loss / Take Profit, unlimited copy trading, and advanced analytics.
+          </p>
+          <div class="soltech-mint">
+            <span class="soltech-mint-label">Mint:</span>
+            <code class="soltech-mint-addr">{{ SOLTECH_MINT.slice(0,18) }}...{{ SOLTECH_MINT.slice(-6) }}</code>
+            <button class="copy-mint-btn" @click="copyMint" :title="SOLTECH_MINT">{{ mintCopied ? '✓' : '⎘' }}</button>
+          </div>
+          <div class="soltech-ctas">
+            <a :href="`https://pump.fun/coin/${SOLTECH_MINT}`" target="_blank" class="cta-pump">Buy on Pump.fun ↗</a>
+            <router-link :to="`/trade/${SOLTECH_MINT}`" class="cta-primary">Trade In-App ↗</router-link>
+          </div>
+        </div>
+        <div class="soltech-right">
+          <div class="soltech-perks">
+            <div class="perk-row"><span class="pk">⚡</span><span>Sniper auto-buy</span></div>
+            <div class="perk-row"><span class="pk">🔄</span><span>DCA recurring orders</span></div>
+            <div class="perk-row"><span class="pk">🛡</span><span>Stop Loss / Take Profit</span></div>
+            <div class="perk-row"><span class="pk">📋</span><span>Copy trade unlimited wallets</span></div>
+            <div class="perk-row"><span class="pk">🐋</span><span>Smart money tracking</span></div>
+            <div class="perk-row"><span class="pk">🔔</span><span>Unlimited price alerts</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- Token Safety Banner -->
     <section class="safety-banner">
       <div class="safety-inner">
@@ -137,7 +170,22 @@
 </template>
 
 <script>
-export default { name: 'HomeView' };
+import { ref } from 'vue';
+
+const SOLTECH_MINT = process.env.VUE_APP_SOLTECH_TOKEN_MINT || 'ZsVAw9KE4mJCNJhKPBKChqCPRHxF8F89kwxZ6zqpump';
+
+export default {
+  name: 'HomeView',
+  setup() {
+    const mintCopied = ref(false);
+    function copyMint() {
+      navigator.clipboard.writeText(SOLTECH_MINT);
+      mintCopied.value = true;
+      setTimeout(() => { mintCopied.value = false; }, 1500);
+    }
+    return { SOLTECH_MINT, mintCopied, copyMint };
+  }
+};
 </script>
 
 <style scoped>
@@ -189,6 +237,26 @@ export default { name: 'HomeView' };
 .prem-left h2 { font-size: 1.4rem; font-weight: 800; color: #e6edf3; margin: 0 0 10px; }
 .prem-left p { font-size: 0.88rem; color: #8b949e; line-height: 1.6; margin: 0 0 16px; }
 .prem-perks { display: flex; flex-wrap: wrap; gap: 10px 20px; font-size: 0.82rem; color: #3fb950; }
+
+/* $SOLTECH Section */
+.soltech-section { margin: 0 24px 40px; max-width: 1152px; margin-left: auto; margin-right: auto; }
+.soltech-inner { display: flex; gap: 40px; padding: 36px 40px; background: linear-gradient(135deg, rgba(240,165,0,0.06) 0%, rgba(88,166,255,0.06) 100%); border: 1px solid rgba(240,165,0,0.3); border-radius: 16px; flex-wrap: wrap; align-items: center; }
+.soltech-left { flex: 1; min-width: 280px; }
+.soltech-badge { display: inline-block; padding: 4px 12px; background: rgba(240,165,0,0.15); border: 1px solid rgba(240,165,0,0.4); border-radius: 20px; font-size: 0.78rem; color: #f0a500; margin-bottom: 12px; }
+.soltech-title { font-size: 1.3rem; font-weight: 800; color: #e6edf3; margin: 0 0 10px; }
+.soltech-desc { font-size: 0.85rem; color: #8b949e; line-height: 1.6; margin: 0 0 14px; }
+.soltech-mint { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.soltech-mint-label { font-size: 0.72rem; color: #8b949e; }
+.soltech-mint-addr { font-family: monospace; font-size: 0.72rem; color: #58a6ff; background: rgba(88,166,255,0.08); padding: 2px 8px; border-radius: 4px; word-break: break-all; }
+.copy-mint-btn { background: none; border: 1px solid #30363d; color: #8b949e; border-radius: 4px; padding: 2px 6px; cursor: pointer; font-size: 0.8rem; }
+.copy-mint-btn:hover { border-color: #58a6ff; color: #58a6ff; }
+.soltech-ctas { display: flex; gap: 10px; flex-wrap: wrap; }
+.cta-pump { padding: 10px 20px; background: rgba(240,165,0,0.12); border: 1px solid rgba(240,165,0,0.4); color: #f0a500; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 0.88rem; }
+.cta-pump:hover { background: rgba(240,165,0,0.22); }
+.soltech-right { display: flex; align-items: center; }
+.soltech-perks { display: flex; flex-direction: column; gap: 8px; }
+.perk-row { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; color: #e6edf3; }
+.pk { font-size: 1rem; width: 20px; }
 
 /* Footer */
 .home-footer { border-top: 1px solid #21262d; padding: 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
