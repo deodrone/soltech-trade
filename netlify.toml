@@ -5,9 +5,10 @@
 [build.environment]
   NODE_VERSION = "20"
 
-  # ── Backend ────────────────────────────────────────────────────────────────
-  VUE_APP_API_BASE_URL = "https://soltech-trade-backend-env.eba-bwsczaqm.us-east-1.elasticbeanstalk.com"
-  VUE_APP_WS_URL       = "wss://soltech-trade-backend-env.eba-bwsczaqm.us-east-1.elasticbeanstalk.com"
+  # ── Backend (via Netlify proxy — no mixed-content issues) ─────────────────
+  # All /api/* and /ws calls go through Netlify → EB over server-to-server HTTP
+  VUE_APP_API_BASE_URL = "https://soltech-trade.netlify.app"
+  VUE_APP_WS_URL       = "wss://soltech-trade.netlify.app"
 
   # ── Firebase (client-side config — public by design) ──────────────────────
   VUE_APP_FIREBASE_API_KEY              = "AIzaSyAGVE3_w1YKvnnMtnpJmiDSxMNd52v1DeQ"
@@ -24,10 +25,32 @@
   VUE_APP_PLATFORM_FEE_BPS   = "50"
   VUE_APP_LAUNCH_FEE_SOL     = "0.1"
 
+# ── Backend proxy (Netlify → EB over server-to-server HTTP) ──────────────────
+# These MUST come before the SPA catch-all so they take priority
+[[redirects]]
+  from   = "/api/*"
+  to     = "http://soltech-trade-backend-env.eba-bwsczaqm.us-east-1.elasticbeanstalk.com/api/:splat"
+  status = 200
+  force  = true
+  [redirects.headers]
+    X-Forwarded-Host = "soltech-trade.netlify.app"
+
+[[redirects]]
+  from   = "/ws"
+  to     = "ws://soltech-trade-backend-env.eba-bwsczaqm.us-east-1.elasticbeanstalk.com"
+  status = 200
+  force  = true
+
+[[redirects]]
+  from   = "/health"
+  to     = "http://soltech-trade-backend-env.eba-bwsczaqm.us-east-1.elasticbeanstalk.com/health"
+  status = 200
+  force  = true
+
 # ── SPA routing ───────────────────────────────────────────────────────────────
 [[redirects]]
   from = "/*"
-  to = "/index.html"
+  to   = "/index.html"
   status = 200
 
 # ── Security & performance headers ────────────────────────────────────────────
@@ -40,7 +63,7 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=()"
     Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://lite-api.jup.ag https://api.jup.ag https://quote-api.jup.ag https://tokens.jup.ag https://dca-api.jup.ag https://api.dexscreener.com https://api.raydium.io https://pump.fun https://public-api.birdeye.so wss: ws: https://*.elasticbeanstalk.com https://*.firebaseapp.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; frame-src 'none'; object-src 'none'; base-uri 'self';"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://lite-api.jup.ag https://api.jup.ag https://quote-api.jup.ag https://tokens.jup.ag https://dca-api.jup.ag https://api.dexscreener.com https://api.raydium.io https://pump.fun https://public-api.birdeye.so wss: ws:; frame-src 'none'; object-src 'none'; base-uri 'self';"
 
 # Cache static assets aggressively
 [[headers]]
