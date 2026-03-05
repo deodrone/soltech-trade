@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import store from '../store';
+import { useReferral } from '../composables/useReferral';
 
 const routes = [
   { path: '/',              name: 'Home',      component: () => import('../views/Home.vue') },
@@ -17,6 +18,11 @@ const routes = [
 const router = createRouter({ history: createWebHistory(), routes });
 
 router.beforeEach((to) => {
+  // Capture referral code on any page visit
+  if (to.query.ref) {
+    const { captureReferral } = useReferral();
+    captureReferral(to);
+  }
   if (to.meta.requiresAuth && !store.getters.isLoggedIn) {
     return { path: '/login', query: { redirect: to.fullPath } };
   }

@@ -1,0 +1,23 @@
+{
+  "name": "Soltech Trade",
+  "short_name": "Soltech",
+  "description": "The fastest Solana trading terminal. Swap, snipe, DCA, and launch tokens.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#0d1117",
+  "orientation": "any",
+  "icons": [
+    { "src": "/favicon.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/apple-touch-icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "screenshots": [
+    { "src": "/og-image.png", "sizes": "1200x630", "type": "image/png", "form_factor": "wide" }
+  ],
+  "categories": ["finance", "utilities"],
+  "shortcuts": [
+    { "name": "Trade", "short_name": "Trade", "description": "Open trading terminal", "url": "/trade", "icons": [{ "src": "/favicon.png", "sizes": "192x192" }] },
+    { "name": "Discover", "short_name": "Discover", "description": "Discover trending tokens", "url": "/discover", "icons": [{ "src": "/favicon.png", "sizes": "192x192" }] },
+    { "name": "Portfolio", "short_name": "Portfolio", "description": "View your portfolio", "url": "/portfolio", "icons": [{ "src": "/favicon.png", "sizes": "192x192" }] }
+  ]
+}

@@ -26,7 +26,7 @@ export function usePortfolio() {
 
       const tokens = fungibles.map(a => {
         const amount = a.token_info?.balance / Math.pow(10, a.token_info?.decimals || 0) || 0;
-        const price = prices[a.id]?.price || 0;
+        const price = prices[a.id]?.usdPrice || 0;
         return {
           mint: a.id,
           symbol: a.token_info?.symbol || a.content?.metadata?.symbol || '???',
@@ -40,7 +40,7 @@ export function usePortfolio() {
       }).filter(t => t.value > 0.01 || t.amount > 0).sort((a, b) => b.value - a.value);
 
       // Add SOL
-      const solPrice = prices['So11111111111111111111111111111111111111112']?.price || 0;
+      const solPrice = prices['So11111111111111111111111111111111111111112']?.usdPrice || 0;
       if (solBalance > 0) {
         tokens.unshift({
           mint: 'So11111111111111111111111111111111111111112',

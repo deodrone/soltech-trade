@@ -2,8 +2,8 @@ import { ref } from 'vue';
 import axios from 'axios';
 
 const JUPITER_API    = 'https://quote-api.jup.ag/v6';
-const JUPITER_ULTRA  = 'https://api.jup.ag/ultra/v1';
-const JUPITER_PRICE  = 'https://api.jup.ag/price/v2';
+const JUPITER_ULTRA  = 'https://lite-api.jup.ag/ultra/v1';
+const JUPITER_PRICE  = 'https://lite-api.jup.ag/price/v3';
 const JUPITER_TOKENS = 'https://tokens.jup.ag/tokens?tags=verified';
 
 // Jupiter Ultra referral fee — min 50 bps, max 255 bps (Jupiter keeps 20%)
@@ -34,7 +34,7 @@ export function useJupiter() {
       const params = { inputMint, outputMint, amount, slippageBps, onlyDirectRoutes: false, asLegacyTransaction: false };
       // Attach platform fee if configured
       if (PLATFORM_FEE_ACCOUNT) {
-        params.platformFeeBps = PLATFORM_FEE_BPS;
+        params.platformFeeBps = REFERRAL_FEE_BPS;
       }
       const { data } = await axios.get(`${JUPITER_API}/quote`, { params });
       return data;
@@ -96,7 +96,7 @@ export function useJupiter() {
     const ids = Array.isArray(mints) ? mints.join(',') : mints;
     try {
       const { data } = await axios.get(`${JUPITER_PRICE}?ids=${ids}`);
-      return data.data;
+      return data || {};
     } catch { return {}; }
   }
 

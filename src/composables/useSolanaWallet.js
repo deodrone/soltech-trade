@@ -2,11 +2,12 @@ import { ref, computed } from 'vue';
 import { useStore } from 'vuex';
 import { Connection, PublicKey, VersionedTransaction } from '@solana/web3.js';
 
-const HELIUS_RPC = `https://mainnet.helius-rpc.com/?api-key=${process.env.VUE_APP_HELIUS_API_KEY}`;
+// Use backend proxy to avoid exposing Helius API key in browser bundle
+const SOLANA_RPC = `${process.env.VUE_APP_API_BASE_URL}/api/helius`;
 
 let connection = null;
 export function getSolanaConnection() {
-  if (!connection) connection = new Connection(HELIUS_RPC, 'confirmed');
+  if (!connection) connection = new Connection(SOLANA_RPC, 'confirmed');
   return connection;
 }
 

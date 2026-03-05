@@ -47,6 +47,13 @@
 
       <router-view />
       <ToastNotification />
+
+      <!-- PWA Install Banner -->
+      <div v-if="canInstall && !installDismissed" class="install-banner">
+        <span>📲 Add Soltech Trade to your home screen for faster access</span>
+        <button class="install-btn" @click="handleInstall">Install App</button>
+        <button class="install-dismiss" @click="installDismissed = true" aria-label="Dismiss">✕</button>
+      </div>
     </template>
   </div>
 </template>
@@ -56,6 +63,7 @@ import { computed, ref } from 'vue';
 import { useStore } from 'vuex';
 import { useAuth } from './composables/useAuth';
 import { useToast } from './composables/useToast';
+import { usePWA } from './composables/usePWA';
 import { useRouter } from 'vue-router';
 import ToastNotification from './components/ToastNotification.vue';
 import WalletConnect from './components/wallet/WalletConnect.vue';
@@ -69,7 +77,9 @@ export default {
     const router = useRouter();
     const { logout } = useAuth();
     const { show } = useToast();
+    const { canInstall, promptInstall } = usePWA();
     const mobileOpen = ref(false);
+    const installDismissed = ref(localStorage.getItem('pwa_installed') === '1');
 
     const isLoggedIn = computed(() => store.getters.isLoggedIn);
     const authReady = computed(() => store.getters.authReady);
@@ -81,7 +91,12 @@ export default {
       router.push('/');
     };
 
-    return { isLoggedIn, authReady, tokenRefreshing, mobileOpen, handleLogout };
+    const handleInstall = async () => {
+      const accepted = await promptInstall();
+      if (!accepted) installDismissed.value = true;
+    };
+
+    return { isLoggedIn, authReady, tokenRefreshing, mobileOpen, handleLogout, canInstall, installDismissed, handleInstall };
   }
 };
 </script>
@@ -136,4 +151,18 @@ body { font-family: 'Inter', 'Segoe UI', Arial, sans-serif; background: #0d1117;
   .hamburger { display: flex; }
   .mobile-menu { display: flex; }
 }
+
+/* PWA Install Banner */
+.install-banner {
+  position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; background: #161b22; border: 1px solid #388bfd;
+  border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+  z-index: 9998; white-space: nowrap; font-size: 0.82rem; color: #e6edf3;
+  max-width: calc(100vw - 32px);
+}
+.install-btn { padding: 6px 14px; background: #1f6feb; color: #fff; border: none; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.install-btn:hover { background: #388bfd; }
+.install-dismiss { background: none; border: none; color: #8b949e; cursor: pointer; font-size: 1rem; padding: 2px 6px; line-height: 1; }
+.install-dismiss:hover { color: #e6edf3; }
 </style>

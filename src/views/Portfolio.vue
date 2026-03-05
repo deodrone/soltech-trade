@@ -20,6 +20,9 @@
         <stat-card label="Total Value" :value="'$' + portfolio.totalUsd.toFixed(2)" />
         <stat-card label="SOL Balance" :value="portfolio.solBalance.toFixed(4) + ' SOL'" />
         <stat-card label="Tokens" :value="String(portfolio.tokens.length)" />
+        <button class="share-btn" @click="sharePortfolio" title="Share portfolio on X">
+          Share Portfolio 𝕏
+        </button>
       </div>
 
       <!-- Holdings Table -->
@@ -70,6 +73,7 @@ import { useStore } from 'vuex';
 import { useSolanaWallet } from '../composables/useSolanaWallet';
 import { usePortfolio } from '../composables/usePortfolio';
 import { useHelius } from '../composables/useHelius';
+import { useReferral } from '../composables/useReferral';
 import WalletConnect from '../components/wallet/WalletConnect.vue';
 import TokenLogo from '../components/common/TokenLogo.vue';
 import StatCard from '../components/common/StatCard.vue';
@@ -79,7 +83,7 @@ export default {
   setup() {
     const store = useStore();
     const router = useRouter();
-    const { connected, publicKey, shortKey } = useSolanaWallet();
+    const { connected, publicKey, shortKey } = useSolanaWallet(); // publicKey used for share
     const { portfolio, loading, loadPortfolio } = usePortfolio();
     const { getTxHistory } = useHelius();
     const txHistory = ref([]);
@@ -111,11 +115,20 @@ export default {
       router.push('/trade');
     }
 
+    const { shareOnTwitter } = useReferral();
+
     const fmt = p => { if (!p) return '0'; if (p < 0.000001) return p.toExponential(2); if (p < 0.01) return p.toFixed(6); return p.toFixed(4); };
     const truncate = (s, n) => s?.length > n ? s.slice(0, n) + '…' : s;
     const txAge = ts => { if (!ts) return ''; const s = Math.floor(Date.now() / 1000 - ts); if (s < 3600) return `${Math.floor(s/60)}m ago`; if (s < 86400) return `${Math.floor(s/3600)}h ago`; return `${Math.floor(s/86400)}d ago`; };
 
-    return { connected, shortKey, portfolio, loading, txHistory, loadingTx, tradeMint, fmt, truncate, txAge };
+    function sharePortfolio() {
+      const val = portfolio.value.totalUsd.toFixed(2);
+      const tokens = portfolio.value.tokens.length;
+      const text = `My Solana portfolio is worth $${val} across ${tokens} tokens — tracked on Soltech Trade, the fastest Solana DEX terminal.\n\nhttps://soltechtrade.netlify.app/?ref=${publicKey.value}`;
+      shareOnTwitter(text);
+    }
+
+    return { connected, shortKey, publicKey, portfolio, loading, txHistory, loadingTx, tradeMint, fmt, truncate, txAge, sharePortfolio };
   },
 };
 </script>
@@ -154,4 +167,6 @@ export default {
 .ok { color: #3fb950; }
 .fail { color: #f85149; }
 .tx-link { color: #58a6ff; text-decoration: none; }
+.share-btn { padding: 8px 18px; background: #0d1117; border: 1px solid #30363d; color: #e6edf3; border-radius: 8px; cursor: pointer; font-size: 0.82rem; font-weight: 600; align-self: center; white-space: nowrap; }
+.share-btn:hover { border-color: #58a6ff; color: #58a6ff; }
 </style>
