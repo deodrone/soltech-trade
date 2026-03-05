@@ -115,7 +115,7 @@ export default {
 
     const { getReferralLink, getMyReferralStats, shareOnTwitter, shareOnTelegram, buildShareText, copyLink } = useReferral();
     const isLoggedIn = computed(() => store.getters.isLoggedIn);
-    const uid = computed(() => store.getters.uid || store.getters['auth/uid'] || null);
+    const uid = computed(() => store.getters.currentUser?.uid || null);
 
     const tab = ref('smartmoney');
     const tokenInput = ref('');
