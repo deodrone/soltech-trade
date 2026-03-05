@@ -12,7 +12,7 @@
           <span class="auto-sol">SOL</span>
         </div>
         <button class="live-btn" :class="{ active: live }" @click="toggleLive">
-          {{ live ? '● LIVE' : '○ PAUSED' }}
+          {{ live ? (wsActive ? '⚡ LIVE' : '● LIVE') : '○ PAUSED' }}
         </button>
       </div>
     </div>
@@ -89,6 +89,7 @@ import { usePumpFun } from '../../composables/usePumpFun';
 import { useJupiter } from '../../composables/useJupiter';
 import { useSolanaWallet } from '../../composables/useSolanaWallet';
 import { useToast } from '../../composables/useToast';
+import { useWebSocket } from '../../composables/useWebSocket';
 import TokenLogo from '../common/TokenLogo.vue';
 
 const SOL_MINT = 'So11111111111111111111111111111111111111112';
@@ -102,12 +103,14 @@ export default {
     const { getQuote, getSwapTransaction, uiToLamports } = useJupiter();
     const { connected, publicKey, signAndSendTransaction } = useSolanaWallet();
     const { show } = useToast();
+    const { connect, on, off } = useWebSocket();
 
     const tokens = ref([]);
     const live = ref(false);
     const autoBuyEnabled = ref(false);
     const autoBuyAmount = ref(0.1);
     const sniping = ref(null);
+    const wsActive = ref(false);
     const filters = ref({ minMcap: null, maxMcap: null, source: 'all', noMintAuth: false });
 
     let pollTimer = null;
@@ -123,19 +126,28 @@ export default {
       });
     });
 
+    // Real-time WebSocket handler for new tokens from backend relay
+    function onNewToken(msg) {
+      if (!live.value) return;
+      const t = msg.data;
+      if (!t?.mint || lastSeen.has(t.mint)) return;
+      lastSeen.add(t.mint);
+      tokens.value = [t, ...tokens.value].slice(0, 200);
+      if (autoBuyEnabled.value && autoBuyAmount.value > 0 && connected.value) {
+        snipe(t, true);
+      }
+    }
+
+    // Fallback HTTP poll (catches anything WS misses)
     async function fetchNew() {
       const raw = await getNewTokens({ limit: 20 });
       const formatted = raw.map(t => ({ ...formatToken(t), source: 'pump' }));
       const newTokens = formatted.filter(t => !lastSeen.has(t.mint));
       newTokens.forEach(t => lastSeen.add(t.mint));
-
       if (newTokens.length) {
-        tokens.value = [...newTokens, ...tokens.value].slice(0, 100);
-        // Auto-buy if enabled
+        tokens.value = [...newTokens, ...tokens.value].slice(0, 200);
         if (autoBuyEnabled.value && autoBuyAmount.value > 0 && connected.value) {
-          for (const t of newTokens.slice(0, 1)) { // only first new token
-            await snipe(t, true);
-          }
+          snipe(newTokens[0], true);
         }
       }
     }
@@ -143,9 +155,17 @@ export default {
     function toggleLive() {
       live.value = !live.value;
       if (live.value) {
+        // Try WebSocket first (real-time, sub-second)
+        connect();
+        on('new_token', onNewToken);
+        wsActive.value = true;
+        // Also seed with latest from API
         fetchNew();
-        pollTimer = setInterval(fetchNew, 10000); // poll every 10s
+        // Fallback poll every 30s (catches edge cases)
+        pollTimer = setInterval(fetchNew, 30000);
       } else {
+        off('new_token', onNewToken);
+        wsActive.value = false;
         clearInterval(pollTimer);
       }
     }
@@ -167,8 +187,15 @@ export default {
       } finally { sniping.value = null; }
     }
 
-    onMounted(() => { fetchNew(); });
-    onBeforeUnmount(() => { clearInterval(pollTimer); });
+    onMounted(() => {
+      fetchNew();
+      // Pre-connect WebSocket so it's ready when user hits Live
+      connect();
+    });
+    onBeforeUnmount(() => {
+      clearInterval(pollTimer);
+      off('new_token', onNewToken);
+    });
 
     function age(ts) {
       if (!ts) return '';
@@ -179,7 +206,7 @@ export default {
     }
     const fmtLg = v => { if (!v) return '—'; if (v >= 1e6) return `$${(v / 1e6).toFixed(1)}M`; if (v >= 1e3) return `$${(v / 1e3).toFixed(0)}K`; return `$${v.toFixed(0)}`; };
 
-    return { tokens, filteredTokens, live, autoBuyEnabled, autoBuyAmount, sniping, filters, connected, toggleLive, snipe, age, fmtLg };
+    return { tokens, filteredTokens, live, wsActive, autoBuyEnabled, autoBuyAmount, sniping, filters, connected, toggleLive, snipe, age, fmtLg };
   },
 };
 </script>

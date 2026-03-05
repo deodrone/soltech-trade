@@ -2,6 +2,7 @@
   <div class="new-launches">
     <div class="section-header">
       <span>🚀 New Launches</span>
+      <span v-if="newCount > 0" class="live-badge">+{{ newCount }} live</span>
       <div class="tabs">
         <button :class="['tab', { active: tab === 'pump' }]" @click="tab = 'pump'">Pump.fun</button>
         <button :class="['tab', { active: tab === 'raydium' }]" @click="tab = 'raydium'">Raydium</button>
@@ -38,9 +39,10 @@
 </template>
 
 <script>
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch, onMounted, onBeforeUnmount } from 'vue';
 import { usePumpFun } from '../../composables/usePumpFun';
 import { useDexScreener } from '../../composables/useDexScreener';
+import { useWebSocket } from '../../composables/useWebSocket';
 import TokenLogo from '../common/TokenLogo.vue';
 
 export default {
@@ -49,9 +51,12 @@ export default {
   setup() {
     const { getNewTokens, formatToken, loading: pumpLoading } = usePumpFun();
     const { getNewPairs, loading: dexLoading } = useDexScreener();
+    const { connect, on, off } = useWebSocket();
     const tab = ref('pump');
     const tokens = ref([]);
     const loading = ref(false);
+    const newCount = ref(0);
+    const seen = new Set();
 
     async function load() {
       loading.value = true;
@@ -74,7 +79,17 @@ export default {
       } finally { loading.value = false; }
     }
 
-    onMounted(load);
+    function onNewToken(msg) {
+      if (tab.value !== 'pump') return;
+      const t = msg.data;
+      if (!t?.mint || seen.has(t.mint)) return;
+      seen.add(t.mint);
+      tokens.value = [t, ...tokens.value].slice(0, 100);
+      newCount.value++;
+    }
+
+    onMounted(() => { load(); connect(); on('new_token', onNewToken); });
+    onBeforeUnmount(() => { off('new_token', onNewToken); });
     watch(tab, load);
 
     function age(ts) {
@@ -88,7 +103,7 @@ export default {
     const fmtLg = v => { if (!v) return '—'; if (v >= 1e6) return `$${(v/1e6).toFixed(1)}M`; if (v >= 1e3) return `$${(v/1e3).toFixed(0)}K`; return `$${v.toFixed(0)}`; };
     const truncate = (s, n) => s?.length > n ? s.slice(0, n) + '…' : s;
 
-    return { tab, tokens, loading, load, age, fmtLg, truncate };
+    return { tab, tokens, loading, newCount, load, age, fmtLg, truncate };
   },
 };
 </script>
@@ -99,6 +114,8 @@ export default {
 .tabs { display: flex; gap: 4px; margin-left: 4px; }
 .tab { padding: 3px 10px; background: #21262d; border: 1px solid #30363d; color: #8b949e; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
 .tab.active { border-color: #58a6ff; color: #58a6ff; background: rgba(88,166,255,0.1); }
+.live-badge { font-size: 0.65rem; font-weight: 700; padding: 2px 7px; background: rgba(63,185,80,0.15); border: 1px solid #3fb950; color: #3fb950; border-radius: 10px; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
 .refresh-btn { margin-left: auto; background: none; border: 1px solid #30363d; color: #8b949e; border-radius: 4px; padding: 2px 8px; cursor: pointer; }
 .loading { padding: 20px; text-align: center; color: #8b949e; font-size: 0.82rem; }
 .launches-list { overflow-y: auto; max-height: 400px; }
