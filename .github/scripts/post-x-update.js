@@ -1,3 +1,9 @@
+// Skip gracefully if X credentials are not configured
+if (!process.env.X_APP_KEY || !process.env.X_APP_SECRET) {
+  console.log("X credentials not configured — skipping post");
+  process.exit(0);
+}
+
 const { TwitterApi } = require('twitter-api-v2');
 
 const client = new TwitterApi({
