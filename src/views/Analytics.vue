@@ -6,6 +6,7 @@
       <button :class="['tab', { active: tab === 'smartmoney' }]" @click="tab = 'smartmoney'">🐋 Smart Money</button>
       <button :class="['tab', { active: tab === 'copytrade' }]" @click="tab = 'copytrade'">📋 Copy Trade</button>
       <button :class="['tab', { active: tab === 'watchlist' }]" @click="tab = 'watchlist'">👁 Watchlist</button>
+      <button :class="['tab', { active: tab === 'refer' }]" @click="tab = 'refer'">🔗 Refer & Earn</button>
     </div>
 
     <!-- Smart Money -->
@@ -47,6 +48,31 @@
       </div>
     </div>
 
+    <!-- Refer & Earn -->
+    <div v-if="tab === 'refer'" class="section refer-section">
+      <div class="refer-hero">
+        <div class="refer-icon">🔗</div>
+        <div class="refer-title">Refer Friends, Grow Together</div>
+        <div class="refer-sub">Share your referral link. Every friend who joins helps grow the Soltech ecosystem.</div>
+      </div>
+      <div v-if="!isLoggedIn" class="empty">Sign in to get your referral link</div>
+      <template v-else>
+        <div class="refer-link-row">
+          <input readonly :value="referralLink" class="mint-input refer-input" />
+          <button class="action-btn" @click="copyRefLink">{{ copied ? '✓ Copied!' : 'Copy Link' }}</button>
+        </div>
+        <div class="refer-share">
+          <button class="share-x" @click="shareRef('twitter')">Share on 𝕏</button>
+          <button class="share-tg" @click="shareRef('telegram')">Share on Telegram</button>
+        </div>
+        <div class="refer-stats">
+          <div class="rstat"><span class="rv">{{ refStats.visits }}</span><span class="rl">Link Visits</span></div>
+          <div class="rstat"><span class="rv">{{ refStats.signups }}</span><span class="rl">Signups</span></div>
+        </div>
+        <div class="refer-note">Share your link anywhere — Discord, Twitter, Reddit, crypto groups. Every visit is tracked.</div>
+      </template>
+    </div>
+
     <!-- Copy Setup Modal -->
     <teleport to="body">
       <div v-if="copyModal.open" class="modal-overlay" @click.self="copyModal.open = false">
@@ -70,11 +96,12 @@
 </template>
 
 <script>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useStore } from 'vuex';
 import { useSmartMoney } from '../composables/useSmartMoney';
 import { useCopyTrade } from '../composables/useCopyTrade';
 import { useToast } from '../composables/useToast';
+import { useReferral } from '../composables/useReferral';
 import SmartMoney from '../components/analytics/SmartMoney.vue';
 import CopyTrade from '../components/analytics/CopyTrade.vue';
 
@@ -86,6 +113,10 @@ export default {
     const { startCopy, loading: copying } = useCopyTrade();
     const { show } = useToast();
 
+    const { getReferralLink, getMyReferralStats, shareOnTwitter, shareOnTelegram, buildShareText, copyLink } = useReferral();
+    const isLoggedIn = computed(() => store.getters.isLoggedIn);
+    const uid = computed(() => store.getters.uid || store.getters['auth/uid'] || null);
+
     const tab = ref('smartmoney');
     const tokenInput = ref('');
     const analyzeToken = ref('');
@@ -94,6 +125,30 @@ export default {
     const watchLabel = ref('');
     const watchedWallets = computed(() => store.getters['analytics/watchedWallets']);
     const copyModal = ref({ open: false, wallet: '', label: '', maxSol: 0.1, slippage: 1 });
+
+    // Referral
+    const referralLink = ref('');
+    const refStats = ref({ visits: 0, signups: 0 });
+    const copied = ref(false);
+
+    onMounted(async () => {
+      if (isLoggedIn.value && uid.value) {
+        referralLink.value = await getReferralLink(uid.value);
+        refStats.value = await getMyReferralStats();
+      }
+    });
+
+    async function copyRefLink() {
+      await copyLink(referralLink.value);
+      copied.value = true;
+      setTimeout(() => { copied.value = false; }, 2000);
+    }
+
+    function shareRef(platform) {
+      const text = buildShareText(referralLink.value, 'trade');
+      if (platform === 'twitter') shareOnTwitter(text);
+      else shareOnTelegram(text);
+    }
 
     function loadTraders() { analyzeToken.value = tokenInput.value.trim(); }
     function openCopySetup(wallet) { copyModal.value = { open: true, wallet, label: '', maxSol: 0.1, slippage: 1 }; tab.value = 'copytrade'; }
@@ -123,7 +178,7 @@ export default {
 
     loadWatchedWallets();
 
-    return { tab, tokenInput, analyzeToken, copyWalletInput, watchInput, watchLabel, watchedWallets, copyModal, copying, loadTraders, openCopySetup, addWatch, removeWatch, startCopy: startCopyTrade };
+    return { tab, tokenInput, analyzeToken, copyWalletInput, watchInput, watchLabel, watchedWallets, copyModal, copying, loadTraders, openCopySetup, addWatch, removeWatch, startCopy: startCopyTrade, isLoggedIn, referralLink, refStats, copied, copyRefLink, shareRef };
   },
 };
 </script>
@@ -158,4 +213,23 @@ export default {
 .modal-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 8px; }
 .modal-body label { font-size: 0.75rem; color: #8b949e; text-transform: uppercase; }
 .modal-input { padding: 8px 12px; background: #21262d; border: 1px solid #30363d; border-radius: 6px; color: #e6edf3; font-size: 0.85rem; outline: none; }
+
+/* Refer & Earn */
+.refer-section { display: flex; flex-direction: column; gap: 16px; }
+.refer-hero { text-align: center; padding: 8px 0 4px; }
+.refer-icon { font-size: 2.2rem; margin-bottom: 8px; }
+.refer-title { font-size: 1.1rem; font-weight: 700; color: #e6edf3; margin-bottom: 6px; }
+.refer-sub { font-size: 0.82rem; color: #8b949e; }
+.refer-link-row { display: flex; gap: 8px; }
+.refer-input { font-family: monospace; font-size: 0.78rem; color: #58a6ff; }
+.refer-share { display: flex; gap: 8px; }
+.share-x { flex: 1; padding: 10px; background: #000; border: 1px solid #30363d; color: #fff; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
+.share-x:hover { background: #1a1a1a; }
+.share-tg { flex: 1; padding: 10px; background: rgba(0,136,204,0.15); border: 1px solid rgba(0,136,204,0.4); color: #0088cc; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
+.share-tg:hover { background: rgba(0,136,204,0.25); }
+.refer-stats { display: flex; gap: 24px; justify-content: center; padding: 16px; background: #0d1117; border-radius: 8px; }
+.rstat { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.rv { font-size: 1.8rem; font-weight: 800; color: #58a6ff; }
+.rl { font-size: 0.72rem; color: #8b949e; text-transform: uppercase; }
+.refer-note { font-size: 0.75rem; color: #484f58; text-align: center; }
 </style>
