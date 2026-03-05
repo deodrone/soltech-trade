@@ -21,7 +21,7 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=()"
     Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://*.helius-rpc.com https://api.jup.ag https://quote-api.jup.ag https://api.dexscreener.com https://api.raydium.io https://pump.fun https://public-api.birdeye.so wss: ws: https://*.elasticbeanstalk.com https://*.firebaseapp.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; frame-src 'none'; object-src 'none'; base-uri 'self';"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://lite-api.jup.ag https://api.jup.ag https://quote-api.jup.ag https://tokens.jup.ag https://api.dexscreener.com https://api.raydium.io https://pump.fun https://public-api.birdeye.so wss: ws: https://*.elasticbeanstalk.com https://*.firebaseapp.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; frame-src 'none'; object-src 'none'; base-uri 'self';"
 
 # Cache static assets aggressively
 [[headers]]
@@ -39,8 +39,14 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# Don't cache the HTML entry point
+# Don't cache the HTML entry point or service worker
 [[headers]]
   for = "/index.html"
   [headers.values]
     Cache-Control = "no-cache, no-store, must-revalidate"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Service-Worker-Allowed = "/"
