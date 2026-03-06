@@ -32,8 +32,6 @@
   to     = "http://soltech-trade-backend-env.eba-bwsczaqm.us-east-1.elasticbeanstalk.com/api/:splat"
   status = 200
   force  = true
-  [redirects.headers]
-    X-Forwarded-Host = "soltech-trade.netlify.app"
 
 [[redirects]]
   from   = "/ws"
